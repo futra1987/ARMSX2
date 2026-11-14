@@ -29,8 +29,9 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install Android NDK and CMake
-        run: yes | sdkmanager "ndk;29.0.14206865" "cmake;3.31.6" >/dev/null || true
+      - name: Install Android NDK, CMake and Build Tools
+        run: |
+          yes | sdkmanager "ndk;29.0.14206865" "cmake;3.31.6" "build-tools;35.0.0" >/dev/null
 
       - name: Sync shaderc dependencies
         run: python3 app/src/main/cpp/3rdparty/shaderc/utils/git-sync-deps
@@ -40,6 +41,12 @@ jobs:
 
       - name: Build ARM64 debug APK
         run: ./gradlew :app:assembleGithubDebug --stacktrace -Parmsx2.applicationId=com.rumble.racing -Parmsx2.appLabel="Rumble Racing"
+
+      - name: Verify APK signature
+        run: |
+          APK=$(find app/build/outputs/apk/github/debug -name "*.apk" -print -quit)
+          test -n "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
 
       - name: Show generated APK files
         if: always()
