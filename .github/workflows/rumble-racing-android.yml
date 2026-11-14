@@ -1,0 +1,50 @@
+name: Rumble Racing Android ARM64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build PS2 Runtime ARM64
+    runs-on: ubuntu-24.04
+
+    defaults:
+      run:
+        working-directory: platforms/android
+
+    steps:
+      - name: Checkout ARMSX2
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install Android NDK and CMake
+        run: yes | sdkmanager "ndk;29.0.14206865" "cmake;3.31.6" >/dev/null
+
+      - name: Sync shaderc dependencies
+        run: python3 app/src/main/cpp/3rdparty/shaderc/utils/git-sync-deps
+
+      - name: Setup Rust Android target
+        run: rustup target add aarch64-linux-android
+
+      - name: Build ARM64 debug APK
+        run: ./gradlew :app:assembleGithubDebug --stacktrace -Parmsx2.applicationId=com.rumble.racing -Parmsx2.appLabel="Rumble Racing"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Rumble-Racing-ARM64-Test
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
